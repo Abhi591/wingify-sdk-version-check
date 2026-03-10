@@ -1,0 +1,102 @@
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import fs from "fs";
+import fetchLatest from "../utils/fetchLatest";
+import isOutdated from "../utils/versionCompare";
+import notifySlack from "../utils/notifySlack";
+
+/**
+ * Convert Composer-style tilde constraints (`~`) into a semver range
+ * that reflects Composer semantics rather than npm's.
+ *
+ * Composer:
+ * - `~1.5`   -> ">=1.5.0 <2.0.0"
+ * - `~1.5.0` -> ">=1.5.0 <1.6.0"
+ *
+ * For any spec that does not match this simple tilde pattern, the
+ * original string is returned unchanged.
+ */
+function composerTildeToRange(spec: string): string {
+  const m = spec.match(/^~\s*([0-9]+)\.([0-9]+)(?:\.([0-9]+))?$/);
+  if (!m) return spec;
+
+  const major = Number(m[1]);
+  const minor = Number(m[2]);
+  const patch = m[3] !== undefined ? Number(m[3]) : undefined;
+
+  const lower = patch === undefined
+    ? `${major}.${minor}.0`
+    : `${major}.${minor}.${patch}`;
+
+  const upper = patch === undefined
+    ? `${major + 1}.0.0`
+    : `${major}.${minor + 1}.0`;
+
+  return `>=${lower} <${upper}`;
+}
+
+/**
+ * Inspect a `composer.json` file and, if `vwo/vwo-fme-php-sdk` is present
+ * in either `require` or `require-dev`, compare its constraint against
+ * the latest Packagist version.
+ */
+async function detectPhp(file: string): Promise<void> {
+  // read the composer.json file
+  const jsonRaw = fs.readFileSync(file, "utf8");
+
+  // parse the composer.json file
+  const json = JSON.parse(jsonRaw) as {
+    require?: Record<string, string>;
+    "require-dev"?: Record<string, string>;
+  };
+
+  // extract the version constraint for vwo/vwo-fme-php-sdk
+  const requireDeps = json.require || {};
+  const requireDevDeps = json["require-dev"] || {};
+
+  const versionSpecRaw =
+    requireDeps["vwo/vwo-fme-php-sdk"] ||
+    requireDevDeps["vwo/vwo-fme-php-sdk"];
+
+  if (!versionSpecRaw) return;
+
+  // normalize Composer tilde constraints so that our semver-based
+  // comparison uses Composer semantics (e.g. "~1.5" -> ">=1.5.0 <2.0.0")
+  const versionSpec = composerTildeToRange(versionSpecRaw);
+
+  // fetch the latest version of the SDK
+  const latest = await fetchLatest("php");
+  if (!latest) {
+    console.log(
+      `PHP SDK detected (current ${versionSpec}) but latest version could not be fetched`
+    );
+    return;
+  }
+
+  // compare the version constraint with the latest version
+  if (isOutdated(versionSpec, latest)) {
+    const message = `:x: Wingify SDK outdated | PHP | current: ${versionSpecRaw} | latest: ${latest} | file: ${file}`;
+    console.log(message);
+    await notifySlack(message);
+    return;
+  }
+
+  console.log(`PHP SDK up to date (${versionSpecRaw})`);
+}
+
+export default detectPhp;
+

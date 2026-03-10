@@ -1,0 +1,27 @@
+{
+  "name": "wingify-sdk-version-check",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:ts": "tsc",
+    "build": "npm run build:ts && npx ncc build lib/index.js -o dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.13.6",
+    "@slack/web-api": "^7.0.0",
+    "fast-glob": "^3.3.3",
+    "semver": "^7.7.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.15",
+    "@types/semver": "^7.7.1",
+    "@vercel/ncc": "^0.38.4",
+    "typescript": "^5.7.0"
+  }
+}
