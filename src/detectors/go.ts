@@ -53,7 +53,22 @@ async function detectGo(file: string): Promise<void> {
 
     // compare the version constraint with the latest version
     if (isOutdated(versionSpec, latest)) {
-      const message = `:x: Wingify SDK outdated | Go | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+      const repoFull = process.env.GITHUB_REPOSITORY;
+      const repoShort =
+        repoFull?.includes("/") ? repoFull.split("/")[1]! : repoFull ?? "this repository";
+      const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+      const workflowRunLine = repoFull
+        ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+        : "";
+      const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Go FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
       console.log(message);
       await notifySlack(message);
       return;

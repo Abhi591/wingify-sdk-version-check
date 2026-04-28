@@ -18853,7 +18853,7 @@ async function detectDotnet(file) {
         const workflowRunLine = repoFull
             ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
             : "";
-        const message = `@here ⚠️ SDK Version Check Failed
+        const message = `<!here> ⚠️ SDK Version Check Failed
 
 The DotNet FME SDK version currently used in *${repoShort}* is not up to date.
 
@@ -18928,7 +18928,21 @@ async function detectGo(file) {
         }
         // compare the version constraint with the latest version
         if ((0, versionCompare_1.default)(versionSpec, latest)) {
-            const message = `:x: Wingify SDK outdated | Go | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+            const repoFull = process.env.GITHUB_REPOSITORY;
+            const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+            const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+            const workflowRunLine = repoFull
+                ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+                : "";
+            const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Go FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
             console.log(message);
             await (0, notifySlack_1.default)(message);
             return;
@@ -19000,7 +19014,21 @@ async function detectJava(file) {
     }
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | Java | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Java FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;
@@ -19059,7 +19087,21 @@ async function detectNode(file) {
     const latest = await (0, fetchLatest_1.default)("node");
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | Node.js | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Node FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;
@@ -19153,7 +19195,21 @@ async function detectPhp(file) {
     }
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | PHP | current: ${versionSpecRaw} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The PHP FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpecRaw}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;
@@ -19216,7 +19272,21 @@ async function detectRuby(file) {
     }
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | Ruby | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Ruby FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;

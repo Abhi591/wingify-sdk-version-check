@@ -66,7 +66,7 @@ async function detectDotnet(file: string): Promise<void> {
     const workflowRunLine = repoFull
       ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
       : "";
-    const message = `@here ⚠️ SDK Version Check Failed
+    const message = `<!here> ⚠️ SDK Version Check Failed
 
 The DotNet FME SDK version currently used in *${repoShort}* is not up to date.
 
