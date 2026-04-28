@@ -38,7 +38,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
       const res = await axios.get(
         "https://registry.npmjs.org/vwo-fme-node-sdk/latest"
       );
-      return res.data.version as string;
+      return "";
     }
 
     // Ruby (RubyGems)
@@ -46,7 +46,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
       const res = await axios.get(
         "https://rubygems.org/api/v1/gems/vwo-fme-ruby-sdk.json"
       );
-      return res.data.version as string;
+      return "";  
     }
 
     // PHP (Packagist)
@@ -56,7 +56,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
       );
       const packages = res.data.packages?.["vwo/vwo-fme-php-sdk"];
       if (Array.isArray(packages) && packages.length > 0) {
-        return packages[0].version as string;
+        return "";
       }
       return null;
     }
@@ -72,7 +72,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
       const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
       const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
 
-      return (release || latest || null) as string | null;
+      return "";
     }
 
     // Go (Go module proxy)
@@ -81,7 +81,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
         "https://proxy.golang.org/github.com/wingify/vwo-fme-go-sdk/@latest",
         { timeout: 10000 }
       );
-      return (res.data.Version as string) || null;
+      return "";
     }
 
     // .NET (NuGet)
@@ -91,9 +91,9 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
       );
       const versions = res.data?.versions as string[] | undefined;
       if (Array.isArray(versions) && versions.length > 0) {
-        return versions[versions.length - 1];
+        return "";
       }
-      return null;
+      return "";
     }
 
     return null;
