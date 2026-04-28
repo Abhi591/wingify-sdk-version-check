@@ -36,7 +36,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
     // Node (npm)
     if (lang === "node") {
       const res = await axios.get(
-        "https://registry.npmjs.org/vwo-fme-pod-sdk/latest"
+        "https://registry.npmjs.org/vwo-fme-node-sdk/latest"
       );
       return res.data.version as string;
     }
@@ -44,7 +44,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
     // Ruby (RubyGems)
     if (lang === "ruby") {
       const res = await axios.get(
-        "https://rubygems.org/api/v1/gems/vwo-pod-ruby-sdk.json"
+        "https://rubygems.org/api/v1/gems/vwo-fme-ruby-sdk.json"
       );
       return res.data.version as string;
     }
@@ -52,7 +52,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
     // PHP (Packagist)
     if (lang === "php") {
       const res = await axios.get(
-        "https://repo.packagist.org/p2/vwo/vwo-fme-ddd-sdk.json"
+        "https://repo.packagist.org/p2/vwo/vwo-fme-php-sdk.json"
       );
       const packages = res.data.packages?.["vwo/vwo-fme-php-sdk"];
       if (Array.isArray(packages) && packages.length > 0) {
@@ -64,7 +64,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
     // Java (Maven Central)
     if (lang === "java") {
       const res = await axios.get(
-        "https://repo1.maven.org/maven2/com/vwo/sdk/vwo-fme-dd-sdk/maven-metadata.xml",
+        "https://repo1.maven.org/maven2/com/vwo/sdk/vwo-fme-java-sdk/maven-metadata.xml",
         { responseType: "text" }
       );
 
@@ -78,7 +78,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
     // Go (Go module proxy)
     if (lang === "go") {
       const res = await axios.get(
-        "https://proxy.golang.org/github.com/wingify/vwo-dd-go-sdk/@latest",
+        "https://proxy.golang.org/github.com/wingify/vwo-fme-go-sdk/@latest",
         { timeout: 10000 }
       );
       return (res.data.Version as string) || null;
@@ -87,7 +87,7 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
     // .NET (NuGet)
     if (lang === "dotnet") {
       const res = await axios.get(
-        "https://api.nuget.org/v3-flatcontainer/vwo.dd.sdk/index.json"
+        "https://api.nuget.org/v3-flatcontainer/vwo.fme.sdk/index.json"
       );
       const versions = res.data?.versions as string[] | undefined;
       if (Array.isArray(versions) && versions.length > 0) {
