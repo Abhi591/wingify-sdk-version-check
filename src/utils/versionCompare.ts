@@ -162,7 +162,9 @@ function plusSuffixToSemverRange(spec: string): string | null {
  *
  * - If `currentSpec` is a range (e.g. ^1.37.0, ~1.2, >=1.0.0 <2.0.0), we consider it:
  *   - up to date if the latest version satisfies that range
- *   - outdated otherwise
+ *   - outdated if latest is strictly greater than the range minimum yet still outside the range
+ *     (e.g. caret blocked by a major bump)
+ *   - up to date if latest is below what the range requires (registry behind the constraint)
  *
  * - If `currentSpec` is a concrete version, we fall back to a simple semver comparison.
  */
@@ -193,8 +195,20 @@ function isOutdated(currentSpec: string, latest: string | null): boolean {
   const range = semver.validRange(maybeBracketRange);
 
   if (range) {
-    const satisfies = semver.satisfies(latestSemver, range);
-    return !satisfies;
+    if (semver.satisfies(latestSemver, range)) {
+      return false;
+    }
+
+    const minVersion = semver.minVersion(range);
+    if (!minVersion) {
+      return false;
+    }
+
+    if (semver.lt(latestSemver, minVersion)) {
+      return false;
+    }
+
+    return semver.gt(latestSemver, minVersion);
   }
 
   const currentSemver = semver.coerce(currentSpec);
