@@ -15,12 +15,13 @@
  */
 
 import axios from "axios";
+import semver from "semver";
 
-type Lang = "node" | "ruby" | "php" | "java" | "go" | "dotnet";
+type Lang = "node" | "ruby" | "php" | "java" | "go" | "dotnet" | "python";
 
 /**
  * Resolve the latest published version of a Wingify SDK for the given language.
- *
+ *      
  * Each language is backed by its ecosystem's registry:
  * - node   -> npm
  * - ruby   -> RubyGems
@@ -28,6 +29,7 @@ type Lang = "node" | "ruby" | "php" | "java" | "go" | "dotnet";
  * - java   -> Maven Central
  * - go     -> Go module proxy
  * - dotnet -> NuGet
+ * - python -> PyPI
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
@@ -94,6 +96,22 @@ async function fetchLatest(lang: Lang): Promise<string | null> {
         return versions[versions.length - 1];
       }
       return null;
+    }
+
+    // Python (PyPI)
+    if (lang === "python") {
+      const res = await axios.get(
+        "https://pypi.org/pypi/vwo-fme-python-sdk/json"
+      );
+      const releases = res.data?.releases as Record<string, unknown> | undefined;
+      if (!releases || typeof releases !== "object") return null;
+
+      const highestKey = Object.keys(releases)
+        .filter((k) => semver.coerce(k))
+        .sort((a, b) => semver.compare(semver.coerce(a)!, semver.coerce(b)!))
+        .pop() ?? null;
+
+      return highestKey;
     }
 
     return null;

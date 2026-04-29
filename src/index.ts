@@ -21,6 +21,7 @@ import detectPhp from "./detectors/php";
 import detectGo from "./detectors/go";
 import detectRuby from "./detectors/ruby";
 import detectDotnet from "./detectors/dotnet";
+import detectPython from "./detectors/python";
 
 /**
  * Entrypoint for the GitHub Action.
@@ -66,6 +67,11 @@ async function run(): Promise<void> {
     // detect .NET
     if (file.endsWith(".csproj")) {
       await detectDotnet(file);
+    }
+
+    // detect Python
+    if (file.endsWith("requirements.txt")) {
+      await detectPython(file);
     }
   }
 }
