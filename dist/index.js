@@ -19246,6 +19246,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const fs_1 = __importDefault(__nccwpck_require__(9896));
+const path_1 = __importDefault(__nccwpck_require__(6928));
 const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
 const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
 const notifySlack_1 = __importDefault(__nccwpck_require__(1988));
@@ -19288,7 +19289,7 @@ async function detectPython(file) {
 
 The Python FME SDK version currently used in *${repoShort}* is not up to date.
 
-• File: \`${file}\`
+• File: \`${path_1.default.basename(file)}\`
 • Current version: \`${versionSpecRaw || "(unpinned)"}\`
 • Latest available version: \`${latest}\`
 

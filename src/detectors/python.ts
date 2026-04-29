@@ -15,6 +15,7 @@
  */
 
 import fs from "fs";
+import path from "path";
 import fetchLatest from "../utils/fetchLatest";
 import isOutdated from "../utils/versionCompare";
 import notifySlack from "../utils/notifySlack";
@@ -66,7 +67,7 @@ async function detectPython(file: string): Promise<void> {
 
 The Python FME SDK version currently used in *${repoShort}* is not up to date.
 
-• File: \`${file}\`
+• File: \`${path.basename(file)}\`
 • Current version: \`${versionSpecRaw || "(unpinned)"}\`
 • Latest available version: \`${latest}\`
 
