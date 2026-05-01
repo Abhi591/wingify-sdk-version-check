@@ -19267,6 +19267,8 @@ async function detectPython(file) {
     const versionSpecRaw = match
         .replace(/^vwo[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i, "")
         .trim();
+    // Strip leading operators for display purposes only (e.g. "==1.2.3" → "1.2.3")
+    const versionSpecDisplay = versionSpecRaw.replace(/^[=!<>~^]+/, "").trim();
     // Normalize pip `==x.y.z` → `=x.y.z` for semver comparison
     const versionSpec = versionSpecRaw
         .replace(/^===/, "=")
@@ -19275,7 +19277,7 @@ async function detectPython(file) {
         .trim();
     const latest = await (0, fetchLatest_1.default)("python");
     if (!latest) {
-        console.log(`Python SDK detected (current ${versionSpecRaw || "(unpinned)"}) but latest version could not be fetched`);
+        console.log(`Python SDK detected (current ${versionSpecDisplay || "(unpinned)"}) but latest version could not be fetched`);
         return;
     }
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
@@ -19290,7 +19292,7 @@ async function detectPython(file) {
 The Python FME SDK version currently used in *${repoShort}* is not up to date.
 
 • File: \`${path_1.default.basename(file)}\`
-• Current version: \`${versionSpecRaw || "(unpinned)"}\`
+• Current version: \`${versionSpecDisplay || "(unpinned)"}\`
 • Latest available version: \`${latest}\`
 
 Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
@@ -19298,7 +19300,7 @@ Please update the SDK to the latest version to maintain compatibility and stabil
         await (0, notifySlack_1.default)(message);
         return;
     }
-    console.log(`Python SDK up to date (${versionSpecRaw || "unpinned"})`);
+    console.log(`Python SDK up to date (${versionSpecDisplay || "unpinned"})`);
 }
 exports["default"] = detectPython;
 
