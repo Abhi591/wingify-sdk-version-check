@@ -32,9 +32,15 @@ async function scanRepo(): Promise<string[]> {
       "**/go.mod",
       "**/Gemfile",
       "**/*.csproj",
+      "**/requirements.txt",
     ],
     {
-      ignore: ["**/node_modules/**"],
+      ignore: [
+        "**/node_modules/**",
+        "**/.venv/**",
+        "**/venv/**",
+        "**/__pypackages__/**",
+      ],
     }
   );
 

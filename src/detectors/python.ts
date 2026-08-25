@@ -15,41 +15,49 @@
  */
 
 import fs from "fs";
+import path from "path";
 import fetchLatest from "../utils/fetchLatest";
 import isOutdated from "../utils/versionCompare";
 import notifySlack from "../utils/notifySlack";
 
 /**
- * Inspect a `Gemfile` and, if `vwo-fme-ruby-sdk` is declared,
- * compare the Ruby-style version constraint against the latest
- * RubyGems release.
+ * Inspect a `requirements.txt` file and, if `vwo-fme-python-sdk` is listed,
+ * compare the declared constraint against the latest PyPI release.
  */
-async function detectRuby(file: string): Promise<void> {
-  // read the Gemfile file
-  const gemfile = fs.readFileSync(file, "utf8");
+async function detectPython(file: string): Promise<void> {
+  const raw = fs.readFileSync(file, "utf8");
 
-  // find the line that contains the version constraint for vwo-fme-ruby-sdk
-  const match = gemfile.match(
-    /gem\s+['"]vwo-fme-ruby-sdk['"][^'\n"]*['"]([^'"]+)['"]/
-  );
+  // Find the vwo-fme-python-sdk entry, stripping inline comments
+  const match = raw
+    .split(/\r?\n/)
+    .map((l) => l.replace(/#.*$/, "").trim())
+    .find((l) => /^vwo[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i.test(l));
 
   if (!match) return;
 
-  // extract the version constraint for vwo-fme-ruby-sdk
-  const versionSpec = match[1].trim();
+  // Extract the raw version spec (e.g. "==1.2.3", ">=1.0,<2.0")
+  const versionSpecRaw = match
+    .replace(/^vwo[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i, "")
+    .trim();
 
-  // fetch the latest version of the SDK
-  const latest = await fetchLatest("ruby");
+  // Strip leading operators for display purposes only (e.g. "==1.2.3" → "1.2.3")
+  const versionSpecDisplay = versionSpecRaw.replace(/^[=!<>~^]+/, "").trim();
 
-  // if the latest version could not be fetched, log a warning and return
+  // Normalize pip `==x.y.z` → `=x.y.z` for semver comparison
+  const versionSpec = versionSpecRaw
+    .replace(/^===/, "=")
+    .replace(/^==/, "=")
+    .replace(/,(?=\s*\S)/g, " ")
+    .trim();
+
+  const latest = await fetchLatest("python");
   if (!latest) {
     console.log(
-      `Ruby SDK detected (current ${versionSpec}) but latest version could not be fetched`
+      `Python SDK detected (current ${versionSpecDisplay || "(unpinned)"}) but latest version could not be fetched`
     );
     return;
   }
 
-  // compare the version constraint with the latest version
   if (isOutdated(versionSpec, latest)) {
     const repoFull = process.env.GITHUB_REPOSITORY;
     const repoShort =
@@ -60,10 +68,10 @@ async function detectRuby(file: string): Promise<void> {
       : "";
     const message = `<!here> ⚠️ SDK Version Check Failed
 
-The Ruby FME SDK version currently used in *${repoShort}* is not up to date.
+The Python FME SDK version currently used in *${repoShort}* is not up to date.
 
-• File: \`${file}\`
-• Current version: \`${versionSpec}\`
+• File: \`${path.basename(file)}\`
+• Current version: \`${versionSpecDisplay || "(unpinned)"}\`
 • Latest available version: \`${latest}\`
 
 Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
@@ -72,8 +80,7 @@ Please update the SDK to the latest version to maintain compatibility and stabil
     return;
   }
 
-  console.log(`Ruby SDK up to date (${versionSpec})`);
+  console.log(`Python SDK up to date (${versionSpecDisplay || "unpinned"})`);
 }
 
-export default detectRuby;
-
+export default detectPython;

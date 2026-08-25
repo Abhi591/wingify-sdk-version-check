@@ -18847,7 +18847,21 @@ async function detectDotnet(file) {
     }
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | .NET | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The DotNet FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;
@@ -18914,7 +18928,21 @@ async function detectGo(file) {
         }
         // compare the version constraint with the latest version
         if ((0, versionCompare_1.default)(versionSpec, latest)) {
-            const message = `:x: Wingify SDK outdated | Go | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+            const repoFull = process.env.GITHUB_REPOSITORY;
+            const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+            const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+            const workflowRunLine = repoFull
+                ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+                : "";
+            const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Go FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
             console.log(message);
             await (0, notifySlack_1.default)(message);
             return;
@@ -18986,7 +19014,21 @@ async function detectJava(file) {
     }
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | Java | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Java FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;
@@ -19045,7 +19087,21 @@ async function detectNode(file) {
     const latest = await (0, fetchLatest_1.default)("node");
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | Node.js | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Node FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;
@@ -19139,7 +19195,21 @@ async function detectPhp(file) {
     }
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | PHP | current: ${versionSpecRaw} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The PHP FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpecRaw}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;
@@ -19147,6 +19217,92 @@ async function detectPhp(file) {
     console.log(`PHP SDK up to date (${versionSpecRaw})`);
 }
 exports["default"] = detectPhp;
+
+
+/***/ }),
+
+/***/ 5099:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+/**
+ * Copyright 2026 Wingify Software Pvt. Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __importDefault(__nccwpck_require__(9896));
+const path_1 = __importDefault(__nccwpck_require__(6928));
+const fetchLatest_1 = __importDefault(__nccwpck_require__(8588));
+const versionCompare_1 = __importDefault(__nccwpck_require__(5492));
+const notifySlack_1 = __importDefault(__nccwpck_require__(1988));
+/**
+ * Inspect a `requirements.txt` file and, if `vwo-fme-python-sdk` is listed,
+ * compare the declared constraint against the latest PyPI release.
+ */
+async function detectPython(file) {
+    const raw = fs_1.default.readFileSync(file, "utf8");
+    // Find the vwo-fme-python-sdk entry, stripping inline comments
+    const match = raw
+        .split(/\r?\n/)
+        .map((l) => l.replace(/#.*$/, "").trim())
+        .find((l) => /^vwo[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i.test(l));
+    if (!match)
+        return;
+    // Extract the raw version spec (e.g. "==1.2.3", ">=1.0,<2.0")
+    const versionSpecRaw = match
+        .replace(/^vwo[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i, "")
+        .trim();
+    // Strip leading operators for display purposes only (e.g. "==1.2.3" → "1.2.3")
+    const versionSpecDisplay = versionSpecRaw.replace(/^[=!<>~^]+/, "").trim();
+    // Normalize pip `==x.y.z` → `=x.y.z` for semver comparison
+    const versionSpec = versionSpecRaw
+        .replace(/^===/, "=")
+        .replace(/^==/, "=")
+        .replace(/,(?=\s*\S)/g, " ")
+        .trim();
+    const latest = await (0, fetchLatest_1.default)("python");
+    if (!latest) {
+        console.log(`Python SDK detected (current ${versionSpecDisplay || "(unpinned)"}) but latest version could not be fetched`);
+        return;
+    }
+    if ((0, versionCompare_1.default)(versionSpec, latest)) {
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Python FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${path_1.default.basename(file)}\`
+• Current version: \`${versionSpecDisplay || "(unpinned)"}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
+        console.log(message);
+        await (0, notifySlack_1.default)(message);
+        return;
+    }
+    console.log(`Python SDK up to date (${versionSpecDisplay || "unpinned"})`);
+}
+exports["default"] = detectPython;
 
 
 /***/ }),
@@ -19202,7 +19358,21 @@ async function detectRuby(file) {
     }
     // compare the version constraint with the latest version
     if ((0, versionCompare_1.default)(versionSpec, latest)) {
-        const message = `:x: Wingify SDK outdated | Ruby | current: ${versionSpec} | latest: ${latest} | file: ${file}`;
+        const repoFull = process.env.GITHUB_REPOSITORY;
+        const repoShort = repoFull?.includes("/") ? repoFull.split("/")[1] : repoFull ?? "this repository";
+        const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
+        const workflowRunLine = repoFull
+            ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
+            : "";
+        const message = `<!here> ⚠️ SDK Version Check Failed
+
+The Ruby FME SDK version currently used in *${repoShort}* is not up to date.
+
+• File: \`${file}\`
+• Current version: \`${versionSpec}\`
+• Latest available version: \`${latest}\`
+
+Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
         console.log(message);
         await (0, notifySlack_1.default)(message);
         return;
@@ -19245,6 +19415,7 @@ const php_1 = __importDefault(__nccwpck_require__(6505));
 const go_1 = __importDefault(__nccwpck_require__(9143));
 const ruby_1 = __importDefault(__nccwpck_require__(8029));
 const dotnet_1 = __importDefault(__nccwpck_require__(5288));
+const python_1 = __importDefault(__nccwpck_require__(5099));
 /**
  * Entrypoint for the GitHub Action.
  *
@@ -19285,6 +19456,10 @@ async function run() {
         if (file.endsWith(".csproj")) {
             await (0, dotnet_1.default)(file);
         }
+        // detect Python
+        if (file.endsWith("requirements.txt")) {
+            await (0, python_1.default)(file);
+        }
     }
 }
 // if the action fails, log an error and exit with a non-zero code
@@ -19321,6 +19496,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const axios_1 = __importDefault(__nccwpck_require__(7269));
+const semver_1 = __importDefault(__nccwpck_require__(2088));
 /**
  * Resolve the latest published version of a Wingify SDK for the given language.
  *
@@ -19331,6 +19507,7 @@ const axios_1 = __importDefault(__nccwpck_require__(7269));
  * - java   -> Maven Central
  * - go     -> Go module proxy
  * - dotnet -> NuGet
+ * - python -> PyPI
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
@@ -19376,6 +19553,18 @@ async function fetchLatest(lang) {
                 return versions[versions.length - 1];
             }
             return null;
+        }
+        // Python (PyPI)
+        if (lang === "python") {
+            const res = await axios_1.default.get("https://pypi.org/pypi/vwo-fme-python-sdk/json");
+            const releases = res.data?.releases;
+            if (!releases || typeof releases !== "object")
+                return null;
+            const highestKey = Object.keys(releases)
+                .filter((k) => semver_1.default.coerce(k))
+                .sort((a, b) => semver_1.default.compare(semver_1.default.coerce(a), semver_1.default.coerce(b)))
+                .pop() ?? null;
+            return highestKey;
         }
         return null;
     }
@@ -19494,8 +19683,14 @@ async function scanRepo() {
         "**/go.mod",
         "**/Gemfile",
         "**/*.csproj",
+        "**/requirements.txt",
     ], {
-        ignore: ["**/node_modules/**"],
+        ignore: [
+            "**/node_modules/**",
+            "**/.venv/**",
+            "**/venv/**",
+            "**/__pypackages__/**",
+        ],
     });
     return files;
 }
@@ -19657,7 +19852,9 @@ function plusSuffixToSemverRange(spec) {
  *
  * - If `currentSpec` is a range (e.g. ^1.37.0, ~1.2, >=1.0.0 <2.0.0), we consider it:
  *   - up to date if the latest version satisfies that range
- *   - outdated otherwise
+ *   - outdated if latest is strictly greater than the range minimum yet still outside the range
+ *     (e.g. caret blocked by a major bump)
+ *   - up to date if latest is below what the range requires (registry behind the constraint)
  *
  * - If `currentSpec` is a concrete version, we fall back to a simple semver comparison.
  */
@@ -19682,8 +19879,17 @@ function isOutdated(currentSpec, latest) {
         : maybePlusRange;
     const range = semver_1.default.validRange(maybeBracketRange);
     if (range) {
-        const satisfies = semver_1.default.satisfies(latestSemver, range);
-        return !satisfies;
+        if (semver_1.default.satisfies(latestSemver, range)) {
+            return false;
+        }
+        const minVersion = semver_1.default.minVersion(range);
+        if (!minVersion) {
+            return false;
+        }
+        if (semver_1.default.lt(latestSemver, minVersion)) {
+            return false;
+        }
+        return semver_1.default.gt(latestSemver, minVersion);
     }
     const currentSemver = semver_1.default.coerce(currentSpec);
     if (!currentSemver)
