@@ -17,7 +17,12 @@
 import fs from "fs";
 import fetchLatest from "../utils/fetchLatest";
 import isOutdated from "../utils/versionCompare";
-import notifySlack from "../utils/notifySlack";
+import {
+  logLatestFetchFailed,
+  logSdkUpToDate,
+  reportOutdatedSdk,
+} from "../utils/reportSdk";
+import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
 /**
  * Inspect a `go.mod` file and, if the module path for the Go SDK is present,
@@ -26,15 +31,24 @@ import notifySlack from "../utils/notifySlack";
  */
 async function detectGo(file: string): Promise<void> {
   try {
-    // read the go.mod file
     const gomod = fs.readFileSync(file, "utf8");
 
-  // find the line that contains the module path for the Go SDK
-    const lineMatch = gomod
-      .split("\n")
-      .find((line: string) => line.includes("vwo-fme-go-sdk"));
+    // Check for both vwo and wingify packages
+    let lineMatch: string | undefined;
+    let packageName: string | undefined;
 
-    if (!lineMatch) {
+    for (const packageName_ of SDK_PACKAGE.GO) {
+      lineMatch = gomod
+        .split("\n")
+        .find((line: string) => line.includes(packageName_));
+      
+      if (lineMatch) {
+        packageName = packageName_;
+        break;
+      }
+    }
+
+    if (!lineMatch || !packageName) {
       console.log(`Go SDK not found in ${file}`);
       return;
     }
@@ -42,45 +56,27 @@ async function detectGo(file: string): Promise<void> {
     const parts = lineMatch.trim().split(/\s+/);
     const versionSpec = parts[parts.length - 1];
 
-    // fetch the latest version of the SDK
-    const latest = await fetchLatest("go");
+    const latest = await fetchLatest(LANG.GO);
     if (!latest) {
-      console.log(
-        `Go SDK detected (current ${versionSpec}) but latest version could not be fetched`
-      );
+      logLatestFetchFailed("Go", versionSpec);
       return;
     }
 
-    // compare the version constraint with the latest version
     if (isOutdated(versionSpec, latest)) {
-      const repoFull = process.env.GITHUB_REPOSITORY;
-      const repoShort =
-        repoFull?.includes("/") ? repoFull.split("/")[1]! : repoFull ?? "this repository";
-      const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
-      const workflowRunLine = repoFull
-        ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
-        : "";
-      const message = `<!here> ⚠️ SDK Version Check Failed
-
-The Go FME SDK version currently used in *${repoShort}* is not up to date.
-
-• File: \`${file}\`
-• Current version: \`${versionSpec}\`
-• Latest available version: \`${latest}\`
-
-Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
-      console.log(message);
-      await notifySlack(message);
+      await reportOutdatedSdk({
+        sdkLabel: SDK_LABEL.GO,
+        file,
+        currentVersion: versionSpec,
+        latest,
+      });
       return;
     }
 
-    console.log(`Go SDK up to date (${versionSpec})`);
-  } catch (err: any) {
-    console.log(
-      `Go detector failed for ${file}: ${err?.message || String(err)}`
-    );
+    logSdkUpToDate("Go", versionSpec);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.log(`Go detector failed for ${file}: ${message}`);
   }
 }
 
 export default detectGo;
-

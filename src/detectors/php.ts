@@ -17,7 +17,12 @@
 import fs from "fs";
 import fetchLatest from "../utils/fetchLatest";
 import isOutdated from "../utils/versionCompare";
-import notifySlack from "../utils/notifySlack";
+import {
+  logLatestFetchFailed,
+  logSdkUpToDate,
+  reportOutdatedSdk,
+} from "../utils/reportSdk";
+import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
 /**
  * Convert Composer-style tilde constraints (`~`) into a semver range
@@ -38,80 +43,67 @@ function composerTildeToRange(spec: string): string {
   const minor = Number(m[2]);
   const patch = m[3] !== undefined ? Number(m[3]) : undefined;
 
-  const lower = patch === undefined
-    ? `${major}.${minor}.0`
-    : `${major}.${minor}.${patch}`;
+  const lower =
+    patch === undefined ? `${major}.${minor}.0` : `${major}.${minor}.${patch}`;
 
-  const upper = patch === undefined
-    ? `${major + 1}.0.0`
-    : `${major}.${minor + 1}.0`;
+  const upper =
+    patch === undefined ? `${major + 1}.0.0` : `${major}.${minor + 1}.0`;
 
   return `>=${lower} <${upper}`;
 }
 
 /**
- * Inspect a `composer.json` file and, if `vwo/vwo-fme-php-sdk` is present
+ * Inspect a `composer.json` file and, if `vwo/vwo-fme-php-sdk` or `wingify/wingify-fme-php-sdk` is present
  * in either `require` or `require-dev`, compare its constraint against
  * the latest Packagist version.
  */
 async function detectPhp(file: string): Promise<void> {
-  // read the composer.json file
   const jsonRaw = fs.readFileSync(file, "utf8");
-
-  // parse the composer.json file
   const json = JSON.parse(jsonRaw) as {
     require?: Record<string, string>;
     "require-dev"?: Record<string, string>;
   };
 
-  // extract the version constraint for vwo/vwo-fme-php-sdk
   const requireDeps = json.require || {};
   const requireDevDeps = json["require-dev"] || {};
 
-  const versionSpecRaw =
-    requireDeps["vwo/vwo-fme-php-sdk"] ||
-    requireDevDeps["vwo/vwo-fme-php-sdk"];
+  // Check for both vwo and wingify packages
+  let versionSpecRaw: string | undefined;
+  let packageName: string | undefined;
 
-  if (!versionSpecRaw) return;
+  for (const packageName_ of SDK_PACKAGE.PHP) {
+    versionSpecRaw =
+      requireDeps[packageName_] || requireDevDeps[packageName_];
+    
+    if (versionSpecRaw) {
+      packageName = packageName_;
+      break;
+    }
+  }
 
-  // normalize Composer tilde constraints so that our semver-based
-  // comparison uses Composer semantics (e.g. "~1.5" -> ">=1.5.0 <2.0.0")
+  if (!versionSpecRaw || !packageName) return;
+
+  // Normalize Composer `~` so comparison uses Composer semantics
+  // (e.g. "~1.5" -> ">=1.5.0 <2.0.0") rather than npm's `~`.
   const versionSpec = composerTildeToRange(versionSpecRaw);
 
-  // fetch the latest version of the SDK
-  const latest = await fetchLatest("php");
+  const latest = await fetchLatest(LANG.PHP);
   if (!latest) {
-    console.log(
-      `PHP SDK detected (current ${versionSpec}) but latest version could not be fetched`
-    );
+    logLatestFetchFailed("PHP", versionSpec);
     return;
   }
 
-  // compare the version constraint with the latest version
   if (isOutdated(versionSpec, latest)) {
-    const repoFull = process.env.GITHUB_REPOSITORY;
-    const repoShort =
-      repoFull?.includes("/") ? repoFull.split("/")[1]! : repoFull ?? "this repository";
-    const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
-    const workflowRunLine = repoFull
-      ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
-      : "";
-    const message = `<!here> ⚠️ SDK Version Check Failed
-
-The PHP FME SDK version currently used in *${repoShort}* is not up to date.
-
-• File: \`${file}\`
-• Current version: \`${versionSpecRaw}\`
-• Latest available version: \`${latest}\`
-
-Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
-    console.log(message);
-    await notifySlack(message);
+    await reportOutdatedSdk({
+      sdkLabel: SDK_LABEL.PHP,
+      file,
+      currentVersion: versionSpecRaw,
+      latest,
+    });
     return;
   }
 
-  console.log(`PHP SDK up to date (${versionSpecRaw})`);
+  logSdkUpToDate("PHP", versionSpecRaw);
 }
 
 export default detectPhp;
-

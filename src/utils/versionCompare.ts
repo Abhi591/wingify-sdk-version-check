@@ -16,20 +16,12 @@
 
 import semver from "semver";
 
-/**
- * Helper for computing the next major version boundary.
- *
- * Example: 1 -> "2.0.0"
- */
+/** Next major boundary, e.g. 1 -> "2.0.0". */
 function incMajor(major: number): string {
   return `${major + 1}.0.0`;
 }
 
-/**
- * Helper for computing the next minor version boundary within a major.
- *
- * Example: (1, 4) -> "1.5.0"
- */
+/** Next minor boundary within a major, e.g. (1, 4) -> "1.5.0". */
 function incMinor(major: number, minor: number): string {
   return `${major}.${minor + 1}.0`;
 }
@@ -175,21 +167,22 @@ function isOutdated(currentSpec: string, latest: string | null): boolean {
   if (!latestSemver) return false;
 
   // Ruby-specific: translate `~>` or bare `~` (e.g. "~1.4") into Bundler-style semver ranges
-  const isRubyTilde = currentSpec.includes("~>") || /^~\s*[0-9]/.test(currentSpec.trim());
+  const isRubyTilde =
+    currentSpec.includes("~>") || /^~\s*[0-9]/.test(currentSpec.trim());
   const rubyNormalized = isRubyTilde
     ? rubyPessimisticToSemverRange(currentSpec)
     : currentSpec;
 
   // Non-standard but common: "1.2.3+" meaning ">=1.2.3"
-  const maybePlusRange =
-    rubyNormalized.trim().endsWith("+")
-      ? plusSuffixToSemverRange(rubyNormalized) ?? rubyNormalized
-      : rubyNormalized;
+  const maybePlusRange = rubyNormalized.trim().endsWith("+")
+    ? (plusSuffixToSemverRange(rubyNormalized) ?? rubyNormalized)
+    : rubyNormalized;
 
   // Maven/NuGet-style bracket ranges (used in Java/.NET) into semver ranges
   const maybeBracketRange =
-    maybePlusRange.trim().startsWith("[") || maybePlusRange.trim().startsWith("(")
-      ? bracketRangeToSemverRange(maybePlusRange) ?? maybePlusRange
+    maybePlusRange.trim().startsWith("[") ||
+    maybePlusRange.trim().startsWith("(")
+      ? (bracketRangeToSemverRange(maybePlusRange) ?? maybePlusRange)
       : maybePlusRange;
 
   const range = semver.validRange(maybeBracketRange);
@@ -218,4 +211,3 @@ function isOutdated(currentSpec: string, latest: string | null): boolean {
 }
 
 export default isOutdated;
-

@@ -18,7 +18,12 @@ import fs from "fs";
 import path from "path";
 import fetchLatest from "../utils/fetchLatest";
 import isOutdated from "../utils/versionCompare";
-import notifySlack from "../utils/notifySlack";
+import {
+  logLatestFetchFailed,
+  logSdkUpToDate,
+  reportOutdatedSdk,
+} from "../utils/reportSdk";
+import { LANG, PYTHON_REQUIREMENT_NAME_RE, SDK_LABEL } from "../constants";
 
 /**
  * Inspect a `requirements.txt` file and, if `vwo-fme-python-sdk` is listed,
@@ -27,60 +32,43 @@ import notifySlack from "../utils/notifySlack";
 async function detectPython(file: string): Promise<void> {
   const raw = fs.readFileSync(file, "utf8");
 
-  // Find the vwo-fme-python-sdk entry, stripping inline comments
   const match = raw
     .split(/\r?\n/)
     .map((l) => l.replace(/#.*$/, "").trim())
-    .find((l) => /^vwo[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i.test(l));
+    .find((l) => PYTHON_REQUIREMENT_NAME_RE.test(l));
 
   if (!match) return;
 
-  // Extract the raw version spec (e.g. "==1.2.3", ">=1.0,<2.0")
-  const versionSpecRaw = match
-    .replace(/^vwo[-_]fme[-_]python[-_]sdk(?!-)(?:\[[^\]]*\])?/i, "")
-    .trim();
+  const versionSpecRaw = match.replace(PYTHON_REQUIREMENT_NAME_RE, "").trim();
 
-  // Strip leading operators for display purposes only (e.g. "==1.2.3" → "1.2.3")
+  // Strip leading operators for display only (e.g. "==1.2.3" → "1.2.3").
   const versionSpecDisplay = versionSpecRaw.replace(/^[=!<>~^]+/, "").trim();
 
-  // Normalize pip `==x.y.z` → `=x.y.z` for semver comparison
+  // Normalize pip pins (`==` / `===`) and comma-separated constraints
+  // into a space-separated spec that `semver` can parse.
   const versionSpec = versionSpecRaw
     .replace(/^===/, "=")
     .replace(/^==/, "=")
     .replace(/,(?=\s*\S)/g, " ")
     .trim();
 
-  const latest = await fetchLatest("python");
+  const latest = await fetchLatest(LANG.PYTHON);
   if (!latest) {
-    console.log(
-      `Python SDK detected (current ${versionSpecDisplay || "(unpinned)"}) but latest version could not be fetched`
-    );
+    logLatestFetchFailed("Python", versionSpecDisplay || "(unpinned)");
     return;
   }
 
   if (isOutdated(versionSpec, latest)) {
-    const repoFull = process.env.GITHUB_REPOSITORY;
-    const repoShort =
-      repoFull?.includes("/") ? repoFull.split("/")[1]! : repoFull ?? "this repository";
-    const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
-    const workflowRunLine = repoFull
-      ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
-      : "";
-    const message = `<!here> ⚠️ SDK Version Check Failed
-
-The Python FME SDK version currently used in *${repoShort}* is not up to date.
-
-• File: \`${path.basename(file)}\`
-• Current version: \`${versionSpecDisplay || "(unpinned)"}\`
-• Latest available version: \`${latest}\`
-
-Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
-    console.log(message);
-    await notifySlack(message);
+    await reportOutdatedSdk({
+      sdkLabel: SDK_LABEL.PYTHON,
+      file: path.basename(file),
+      currentVersion: versionSpecDisplay || "(unpinned)",
+      latest,
+    });
     return;
   }
 
-  console.log(`Python SDK up to date (${versionSpecDisplay || "unpinned"})`);
+  logSdkUpToDate("Python", versionSpecDisplay || "unpinned");
 }
 
 export default detectPython;

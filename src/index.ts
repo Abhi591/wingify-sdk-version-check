@@ -22,63 +22,87 @@ import detectGo from "./detectors/go";
 import detectRuby from "./detectors/ruby";
 import detectDotnet from "./detectors/dotnet";
 import detectPython from "./detectors/python";
+import detectAndroid from "./detectors/android";
+import detectIos from "./detectors/ios";
+import detectReactNative from "./detectors/reactNative";
+import detectReact from "./detectors/react";
+import detectFlutter from "./detectors/flutter";
+import { ENV, MANIFEST } from "./constants";
 
 /**
  * Entrypoint for the GitHub Action.
  *
  * - Scans the repository for language-specific manifest files.
  * - For each manifest, invokes the matching detector.
- * - Each detector logs whether the corresponding Wingify SDK is up to date.
+ * - Each detector logs whether the corresponding Wingify SDK is up to date
+ *   and posts a Slack notification when it is outdated.
  */
 async function run(): Promise<void> {
-  // scan the repository for language-specific manifest files
   const files = await scanRepo();
-  if (process.env.DEBUG === "true") {
+
+  if (process.env[ENV.DEBUG] === "true") {
     console.log(`wingify-sdk-version-check: found ${files.length} manifest(s)`);
     for (const f of files) console.log(`- ${f}`);
   }
 
   for (const file of files) {
-    // detect the language of the file and invoke the corresponding detector
-    if (file.endsWith("package.json")) {
+    if (file.endsWith(MANIFEST.PACKAGE_JSON)) {
       await detectNode(file);
+      await detectReactNative(file);
+      await detectReact(file);
     }
 
-    // detect Java
-    if (file.endsWith("pom.xml")) {
+    if (file.endsWith(MANIFEST.POM_XML)) {
       await detectJava(file);
     }
 
-    // detect PHP
-    if (file.endsWith("composer.json")) {
+    if (file.endsWith(MANIFEST.COMPOSER_JSON)) {
       await detectPhp(file);
     }
 
-    // detect Go
-    if (file.endsWith("go.mod")) {
+    if (file.endsWith(MANIFEST.GO_MOD)) {
       await detectGo(file);
     }
 
-    // detect Ruby
-    if (file.endsWith("Gemfile")) {
+    if (file.endsWith(MANIFEST.GEMFILE)) {
       await detectRuby(file);
     }
 
-    // detect .NET
-    if (file.endsWith(".csproj")) {
+    if (file.endsWith(MANIFEST.CSPROJ)) {
       await detectDotnet(file);
     }
 
-    // detect Python
-    if (file.endsWith("requirements.txt")) {
+    if (file.endsWith(MANIFEST.REQUIREMENTS_TXT)) {
       await detectPython(file);
+    }
+
+    if (file.endsWith(MANIFEST.BUILD_GRADLE_KTS)) {
+      await detectAndroid(file);
+    } else if (file.endsWith(MANIFEST.BUILD_GRADLE)) {
+      await detectAndroid(file);
+    }
+
+    if (file.endsWith(MANIFEST.PUBSPEC_YAML)) {
+      await detectFlutter(file);
+    }
+
+    if (file.endsWith(MANIFEST.LIBS_VERSIONS_TOML)) {
+      await detectAndroid(file);
+    }
+
+    if (
+      file.endsWith(`/${MANIFEST.PODFILE}`) ||
+      file.endsWith(`/${MANIFEST.PODFILE_LOCK}`) ||
+      file.endsWith(`/${MANIFEST.PACKAGE_SWIFT}`) ||
+      file.endsWith(`/${MANIFEST.PACKAGE_RESOLVED}`) ||
+      file.endsWith(`/${MANIFEST.PBXPROJ}`)
+    ) {
+      await detectIos(file);
     }
   }
 }
 
-// if the action fails, log an error and exit with a non-zero code
 run().catch((err) => {
   console.error("Wingify SDK Version Check failed:", err);
   process.exitCode = 1;
 });
-

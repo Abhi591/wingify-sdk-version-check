@@ -17,63 +17,59 @@
 import fs from "fs";
 import fetchLatest from "../utils/fetchLatest";
 import isOutdated from "../utils/versionCompare";
-import notifySlack from "../utils/notifySlack";
+import {
+  logLatestFetchFailed,
+  logSdkUpToDate,
+  reportOutdatedSdk,
+} from "../utils/reportSdk";
+import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
 /**
- * Inspect a `Gemfile` and, if `vwo-fme-ruby-sdk` is declared,
+ * Inspect a `Gemfile` and, if `vwo-fme-ruby-sdk` or `wingify-fme-ruby-sdk` is declared,
  * compare the Ruby-style version constraint against the latest
  * RubyGems release.
  */
 async function detectRuby(file: string): Promise<void> {
-  // read the Gemfile file
   const gemfile = fs.readFileSync(file, "utf8");
 
-  // find the line that contains the version constraint for vwo-fme-ruby-sdk
-  const match = gemfile.match(
-    /gem\s+['"]vwo-fme-ruby-sdk['"][^'\n"]*['"]([^'"]+)['"]/
-  );
+  // Check for both vwo and wingify packages
+  let versionSpec: string | undefined;
+  let packageName: string | undefined;
 
-  if (!match) return;
-
-  // extract the version constraint for vwo-fme-ruby-sdk
-  const versionSpec = match[1].trim();
-
-  // fetch the latest version of the SDK
-  const latest = await fetchLatest("ruby");
-
-  // if the latest version could not be fetched, log a warning and return
-  if (!latest) {
-    console.log(
-      `Ruby SDK detected (current ${versionSpec}) but latest version could not be fetched`
+  for (const packageName_ of SDK_PACKAGE.RUBY) {
+    const gemPattern = new RegExp(
+      String.raw`gem\s+['"]` +
+        packageName_ +
+        String.raw`['"][^'\n"]*['"]([^'"]+)['"]`,
     );
+    const match = gemfile.match(gemPattern);
+
+    if (match) {
+      packageName = packageName_;
+      versionSpec = match[1].trim();
+      break;
+    }
+  }
+
+  if (!versionSpec || !packageName) return;
+
+  const latest = await fetchLatest(LANG.RUBY);
+  if (!latest) {
+    logLatestFetchFailed("Ruby", versionSpec);
     return;
   }
 
-  // compare the version constraint with the latest version
   if (isOutdated(versionSpec, latest)) {
-    const repoFull = process.env.GITHUB_REPOSITORY;
-    const repoShort =
-      repoFull?.includes("/") ? repoFull.split("/")[1]! : repoFull ?? "this repository";
-    const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
-    const workflowRunLine = repoFull
-      ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
-      : "";
-    const message = `<!here> ⚠️ SDK Version Check Failed
-
-The Ruby FME SDK version currently used in *${repoShort}* is not up to date.
-
-• File: \`${file}\`
-• Current version: \`${versionSpec}\`
-• Latest available version: \`${latest}\`
-
-Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
-    console.log(message);
-    await notifySlack(message);
+    await reportOutdatedSdk({
+      sdkLabel: SDK_LABEL.RUBY,
+      file,
+      currentVersion: versionSpec,
+      latest,
+    });
     return;
   }
 
-  console.log(`Ruby SDK up to date (${versionSpec})`);
+  logSdkUpToDate("Ruby", versionSpec);
 }
 
 export default detectRuby;
-

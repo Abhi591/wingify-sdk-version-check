@@ -17,58 +17,58 @@
 import fs from "fs";
 import fetchLatest from "../utils/fetchLatest";
 import isOutdated from "../utils/versionCompare";
-import notifySlack from "../utils/notifySlack";
+import {
+  logLatestFetchFailed,
+  logSdkUpToDate,
+  reportOutdatedSdk,
+} from "../utils/reportSdk";
+import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
 /**
- * Inspect a `package.json` file and, if `vwo-fme-node-sdk` is present,
+ * Inspect a `package.json` file and, if `vwo-fme-node-sdk` or `wingify-fme-node-sdk` is present,
  * compare the declared version/range against the latest npm release.
  */
 async function detectNode(file: string): Promise<void> {
-  // read the package.json file
   const pkgRaw = fs.readFileSync(file, "utf8");
-
-  // parse the package.json file
   const pkg = JSON.parse(pkgRaw) as {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
   };
 
-  // extract the version constraint for vwo-fme-node-sdk
-  const versionSpec =
-    pkg.dependencies?.["vwo-fme-node-sdk"] ||
-    pkg.devDependencies?.["vwo-fme-node-sdk"];
+  // Check for both vwo and wingify packages
+  let versionSpec: string | undefined;
+  let packageName: string | undefined;
 
-  // if the version constraint is not found, return
-  if (!versionSpec) return;
+  for (const packageName_ of SDK_PACKAGE.NODE) {
+    versionSpec =
+      pkg.dependencies?.[packageName_] ||
+      pkg.devDependencies?.[packageName_];
+    
+    if (versionSpec) {
+      packageName = packageName_;
+      break;
+    }
+  }
 
-  // fetch the latest version of the SDK
-  const latest = await fetchLatest("node");
+  if (!versionSpec || !packageName) return;
 
-  // compare the version constraint with the latest version
-  if (isOutdated(versionSpec, latest)) {
-    const repoFull = process.env.GITHUB_REPOSITORY;
-    const repoShort =
-      repoFull?.includes("/") ? repoFull.split("/")[1]! : repoFull ?? "this repository";
-    const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
-    const workflowRunLine = repoFull
-      ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
-      : "";
-    const message = `<!here> ⚠️ SDK Version Check Failed
-
-The Node FME SDK version currently used in *${repoShort}* is not up to date.
-
-• File: \`${file}\`
-• Current version: \`${versionSpec}\`
-• Latest available version: \`${latest}\`
-
-Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
-    console.log(message);
-    await notifySlack(message);
+  const latest = await fetchLatest(LANG.NODE);
+  if (!latest) {
+    logLatestFetchFailed("Node", versionSpec);
     return;
   }
 
-  console.log(`Node SDK up to date -- (${versionSpec})`);
+  if (isOutdated(versionSpec, latest)) {
+    await reportOutdatedSdk({
+      sdkLabel: SDK_LABEL.NODE,
+      file,
+      currentVersion: versionSpec,
+      latest,
+    });
+    return;
+  }
+
+  logSdkUpToDate("Node", versionSpec);
 }
 
 export default detectNode;
-

@@ -17,65 +17,61 @@
 import fs from "fs";
 import fetchLatest from "../utils/fetchLatest";
 import isOutdated from "../utils/versionCompare";
-import notifySlack from "../utils/notifySlack";
+import {
+  logLatestFetchFailed,
+  logSdkUpToDate,
+  reportOutdatedSdk,
+} from "../utils/reportSdk";
+import { LANG, SDK_LABEL, SDK_PACKAGE } from "../constants";
 
 /**
- * Inspect a `pom.xml` and, if the `vwo-fme-java-sdk` dependency is present,
+ * Inspect a `pom.xml` and, if the `vwo-fme-java-sdk` or `wingify-fme-java-sdk` dependency is present,
  * compare its version (or range) with the latest version reported by
  * Maven Central metadata.
  */
 async function detectJava(file: string): Promise<void> {
-  // read the pom.xml file
   const xml = fs.readFileSync(file, "utf8");
 
-  // find the index of the <artifactId>vwo-fme-java-sdk</artifactId> tag
-  const depIndex = xml.indexOf("<artifactId>vwo-fme-java-sdk</artifactId>");
-  if (depIndex === -1) return;
+  // Check for both vwo and wingify packages
+  let versionSpec: string | undefined;
+  let packageName: string | undefined;
 
-  // get the text after the <artifactId>vwo-fme-java-sdk</artifactId> tag
-  const after = xml.slice(depIndex);
+  for (const packageName_ of SDK_PACKAGE.JAVA) {
+    const artifactTag = `<artifactId>${packageName_}</artifactId>`;
+    const depIndex = xml.indexOf(artifactTag);
+    
+    if (depIndex !== -1) {
+      packageName = packageName_;
+      // Version is expected after the matching `<artifactId>` in the same dependency block.
+      const after = xml.slice(depIndex);
+      const versionMatch = after.match(/<version>\s*([^<]+)\s*<\/version>/);
+      
+      if (versionMatch) {
+        versionSpec = versionMatch[1].trim();
+        break;
+      }
+    }
+  }
 
-  // find the version number
-  const versionMatch = after.match(/<version>\s*([^<]+)\s*<\/version>/);
-  if (!versionMatch) return;
+  if (!versionSpec || !packageName) return;
 
-  // extract the version constraint for vwo-fme-java-sdk
-  const versionSpec = versionMatch[1].trim();
-
-  // fetch the latest version of the SDK
-  const latest = await fetchLatest("java");
+  const latest = await fetchLatest(LANG.JAVA);
   if (!latest) {
-    console.log(
-      `Java SDK detected (current ${versionSpec}) but latest version could not be fetched`
-    );
+    logLatestFetchFailed("Java", versionSpec);
     return;
   }
 
-  // compare the version constraint with the latest version
   if (isOutdated(versionSpec, latest)) {
-    const repoFull = process.env.GITHUB_REPOSITORY;
-    const repoShort =
-      repoFull?.includes("/") ? repoFull.split("/")[1]! : repoFull ?? "this repository";
-    const githubServer = process.env.GITHUB_SERVER_URL ?? "https://github.com";
-    const workflowRunLine = repoFull
-      ? `\n\nFor more details, refer to the latest workflow run: ${githubServer}/${repoFull}/actions`
-      : "";
-    const message = `<!here> ⚠️ SDK Version Check Failed
-
-The Java FME SDK version currently used in *${repoShort}* is not up to date.
-
-• File: \`${file}\`
-• Current version: \`${versionSpec}\`
-• Latest available version: \`${latest}\`
-
-Please update the SDK to the latest version to maintain compatibility and stability.${workflowRunLine}`;
-    console.log(message);
-    await notifySlack(message);
+    await reportOutdatedSdk({
+      sdkLabel: SDK_LABEL.JAVA,
+      file,
+      currentVersion: versionSpec,
+      latest,
+    });
     return;
   }
 
-  console.log(`Java SDK up to date (${versionSpec})`);
+  logSdkUpToDate("Java", versionSpec);
 }
 
 export default detectJava;
-

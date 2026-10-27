@@ -16,12 +16,17 @@
 
 import axios from "axios";
 import semver from "semver";
-
-type Lang = "node" | "ruby" | "php" | "java" | "go" | "dotnet" | "python";
+import {
+  GO_PROXY_TIMEOUT_MS,
+  LANG,
+  Lang,
+  REGISTRY_URL,
+  SDK_PACKAGE,
+} from "../constants";
 
 /**
  * Resolve the latest published version of a Wingify SDK for the given language.
- *      
+ *
  * Each language is backed by its ecosystem's registry:
  * - node   -> npm
  * - ruby   -> RubyGems
@@ -30,103 +35,251 @@ type Lang = "node" | "ruby" | "php" | "java" | "go" | "dotnet" | "python";
  * - go     -> Go module proxy
  * - dotnet -> NuGet
  * - python -> PyPI
+ * - android -> Maven Central (AAR artifacts)
+ * - ios     -> CocoaPods trunk API (VWO-FME / Wingify-FME)
+ * - react-native -> npm (vwo-fme-react-native-sdk / wingify-fme-react-native-sdk)
+ * - react        -> npm (vwo-fme-react-sdk / wingify-fme-react-sdk)
+ * - flutter      -> pub.dev (vwo_fme_flutter_sdk / wingify_fme_flutter_sdk)
  *
  * Returns `null` when the SDK is unknown or the registry query fails.
  */
 async function fetchLatest(lang: Lang): Promise<string | null> {
   try {
-    // Node (npm)
-    if (lang === "node") {
-      const res = await axios.get(
-        "https://registry.npmjs.org/vwo-fme-node-sdk/latest"
-      );
-      return res.data.version as string;
-    }
-
-    // Ruby (RubyGems)
-    if (lang === "ruby") {
-      const res = await axios.get(
-        "https://rubygems.org/api/v1/gems/vwo-fme-ruby-sdk.json"
-      );
-      return res.data.version as string;
-    }
-
-    // PHP (Packagist)
-    if (lang === "php") {
-      const res = await axios.get(
-        "https://repo.packagist.org/p2/vwo/vwo-fme-php-sdk.json"
-      );
-      const packages = res.data.packages?.["vwo/vwo-fme-php-sdk"];
-      if (Array.isArray(packages) && packages.length > 0) {
-        return packages[0].version as string;
+    if (lang === LANG.NODE || lang === LANG.REACT_NATIVE) {
+      const urls =
+        lang === LANG.NODE ? REGISTRY_URL.NODE : REGISTRY_URL.REACT_NATIVE;
+      for (const url of urls) {
+        try {
+          const res = await axios.get(url);
+          return res.data.version as string;
+        } catch {
+          continue;
+        }
       }
       return null;
     }
 
-    // Java (Maven Central)
-    if (lang === "java") {
-      const res = await axios.get(
-        "https://repo1.maven.org/maven2/com/vwo/sdk/vwo-fme-java-sdk/maven-metadata.xml",
-        { responseType: "text" }
-      );
-
-      const xml = String(res.data);
-      const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
-      const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
-
-      return (release || latest || null) as string | null;
-    }
-
-    // Go (Go module proxy)
-    if (lang === "go") {
-      const res = await axios.get(
-        "https://proxy.golang.org/github.com/wingify/vwo-fme-go-sdk/@latest",
-        { timeout: 10000 }
-      );
-      return (res.data.Version as string) || null;
-    }
-
-    // .NET (NuGet)
-    if (lang === "dotnet") {
-      const res = await axios.get(
-        "https://api.nuget.org/v3-flatcontainer/vwo.fme.sdk/index.json"
-      );
-      const versions = res.data?.versions as string[] | undefined;
-      if (Array.isArray(versions) && versions.length > 0) {
-        return versions[versions.length - 1];
+    if (lang === LANG.RUBY) {
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.RUBY) {
+        try {
+          const res = await axios.get(url);
+          return res.data.version as string;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
       }
       return null;
     }
 
-    // Python (PyPI)
-    if (lang === "python") {
-      const res = await axios.get(
-        "https://pypi.org/pypi/vwo-fme-python-sdk/json"
-      );
-      const releases = res.data?.releases as Record<string, unknown> | undefined;
-      if (!releases || typeof releases !== "object") return null;
+    if (lang === LANG.PHP) {
+      // Try both vwo and wingify packages
+      for (let i = 0; i < REGISTRY_URL.PHP.length; i++) {
+        try {
+          const res = await axios.get(REGISTRY_URL.PHP[i]);
+          const packages = res.data.packages?.[SDK_PACKAGE.PHP[i]];
+          if (Array.isArray(packages) && packages.length > 0) {
+            // Packagist p2 responses list versions newest-first.
+            return packages[0].version as string;
+          }
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
+    }
 
-      const highestKey = Object.keys(releases)
-        .filter((k) => semver.coerce(k))
-        .sort((a, b) => semver.compare(semver.coerce(a)!, semver.coerce(b)!))
-        .pop() ?? null;
+    if (lang === LANG.JAVA) {
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.JAVA) {
+        try {
+          const res = await axios.get(url, { responseType: "text" });
 
-      return highestKey;
+          const xml = String(res.data);
+          const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
+          const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
+
+          // Prefer `<release>` (last non-snapshot) over `<latest>`.
+          const version = (release || latest || null) as string | null;
+          if (version) return version;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
+    }
+
+    if (lang === LANG.GO) {
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.GO) {
+        try {
+          const res = await axios.get(url, {
+            timeout: GO_PROXY_TIMEOUT_MS,
+          });
+          return (res.data.Version as string) || null;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
+    }
+
+    if (lang === LANG.DOTNET) {
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.DOTNET) {
+        try {
+          const res = await axios.get(url);
+          const versions = res.data?.versions as string[] | undefined;
+          if (Array.isArray(versions) && versions.length > 0) {
+            // NuGet's flat-container index lists versions in ascending order.
+            return versions[versions.length - 1];
+          }
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
+    }
+
+    if (lang === LANG.ANDROID) {
+      for (const url of REGISTRY_URL.ANDROID) {
+        try {
+          const res = await axios.get(url, { responseType: "text" });
+          const xml = String(res.data);
+          const release = xml.match(/<release>\s*([^<\s]+)\s*<\/release>/)?.[1];
+          const latest = xml.match(/<latest>\s*([^<\s]+)\s*<\/latest>/)?.[1];
+          const version = (release || latest || null) as string | null;
+          if (version) return version;
+        } catch {
+          continue;
+        }
+      }
+      return null;
+    }
+
+    if (lang === LANG.IOS) {
+      const candidates: string[] = [];
+      for (const url of REGISTRY_URL.IOS) {
+        try {
+          const res = await axios.get(url);
+          const versions = res.data?.versions as { name: string }[] | undefined;
+          if (!Array.isArray(versions) || versions.length === 0) continue;
+
+          const highest =
+            versions
+              .map((v) => v.name)
+              .filter((name) => semver.coerce(name))
+              .sort((a, b) =>
+                semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+              )
+              .pop() ?? null;
+
+          if (highest) candidates.push(highest);
+        } catch {
+          continue;
+        }
+      }
+
+      if (candidates.length === 0) return null;
+
+      return candidates.sort((a, b) =>
+        semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+      )[candidates.length - 1];
+    }
+
+    if (lang === LANG.PYTHON) {
+      // Try both vwo and wingify packages
+      for (const url of REGISTRY_URL.PYTHON) {
+        try {
+          const res = await axios.get(url);
+          const releases = res.data?.releases as
+            Record<string, unknown> | undefined;
+          if (!releases || typeof releases !== "object") continue;
+
+          // Pick the highest coercible semver key rather than trusting `info.version`,
+          // which can lag behind the releases map for some packages.
+          const highestKey =
+            Object.keys(releases)
+              .filter((k) => semver.coerce(k))
+              .sort((a, b) =>
+                semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+              )
+              .pop() ?? null;
+
+          if (highestKey) return highestKey;
+        } catch (err) {
+          // Continue to next URL if this one fails
+          continue;
+        }
+      }
+      return null;
+    }
+
+    if (lang === LANG.REACT) {
+      const candidates: string[] = [];
+      for (const url of REGISTRY_URL.REACT) {
+        try {
+          const res = await axios.get(url);
+          const version = res.data?.version as string | undefined;
+          if (version && semver.coerce(version)) {
+            candidates.push(version);
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (candidates.length === 0) return null;
+
+      return candidates.sort((a, b) =>
+        semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+      )[candidates.length - 1];
+    }
+
+    if (lang === LANG.FLUTTER) {
+      const candidates: string[] = [];
+      for (const url of REGISTRY_URL.FLUTTER) {
+        try {
+          const res = await axios.get(url);
+          const version = res.data?.latest?.version as string | undefined;
+          if (version && semver.coerce(version)) {
+            candidates.push(version);
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      if (candidates.length === 0) return null;
+
+      return candidates.sort((a, b) =>
+        semver.compare(semver.coerce(a)!, semver.coerce(b)!),
+      )[candidates.length - 1];
     }
 
     return null;
-  } catch (err: any) {
-    const status = err?.response?.status;
-    const statusText = err?.response?.statusText;
-    const message = err?.message || "unknown error";
+  } catch (err: unknown) {
     console.log(
-      `Failed to fetch latest version for ${lang}: ${
-        status ? `${status} ${statusText || ""}`.trim() : message
-      }`
+      `Failed to fetch latest version for ${lang}: ${formatHttpError(err)}`,
     );
     return null;
   }
 }
 
-export default fetchLatest;
+function formatHttpError(err: unknown): string {
+  const axiosLike = err as {
+    response?: { status?: number; statusText?: string };
+    message?: string;
+  };
+  const status = axiosLike?.response?.status;
+  const statusText = axiosLike?.response?.statusText;
+  const message = axiosLike?.message || "unknown error";
+  return status ? `${status} ${statusText || ""}`.trim() : message;
+}
 
+export default fetchLatest;

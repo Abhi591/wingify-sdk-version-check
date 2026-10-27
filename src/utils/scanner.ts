@@ -15,37 +15,21 @@
  */
 
 import fg from "fast-glob";
+import { MANIFEST_GLOBS, SCAN_IGNORE } from "../constants";
 
 /**
  * Discover manifest files in the current repository that may reference
  * a Wingify SDK.
  *
- * This is intentionally language-agnostic and only cares about common
- * dependency/manifest filenames.
+ * This is intentionally language-agnostic and only matches common
+ * dependency/manifest filenames (see `MANIFEST_GLOBS`).
  */
 async function scanRepo(): Promise<string[]> {
-  const files = await fg(
-    [
-      "**/package.json",
-      "**/pom.xml",
-      "**/composer.json",
-      "**/go.mod",
-      "**/Gemfile",
-      "**/*.csproj",
-      "**/requirements.txt",
-    ],
-    {
-      ignore: [
-        "**/node_modules/**",
-        "**/.venv/**",
-        "**/venv/**",
-        "**/__pypackages__/**",
-      ],
-    }
-  );
+  const files = await fg(MANIFEST_GLOBS, {
+    ignore: SCAN_IGNORE,
+  });
 
   return files as string[];
 }
 
 export default scanRepo;
-

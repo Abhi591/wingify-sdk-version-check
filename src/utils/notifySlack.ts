@@ -15,47 +15,49 @@
  */
 
 import { WebClient } from "@slack/web-api";
+import { ENV } from "../constants";
 
 /**
- * Best-effort Slack notifier.
+ * Best-effort Slack notifier using the Web API (`chat.postMessage`).
  *
- * Supports two mechanisms:
- * - Web API `chat.postMessage` using:
- *   - `SLACK_NOTIFICATIONS_BOT_TOKEN` (preferred) or `SLACK_BOT_TOKEN`
- *   - `CHANNEL_ID` or `SLACK_CHANNEL`
- * - Incoming webhook:
- *   - `SLACK_WEBHOOK` env var, or
- *   - `slack_webhook` GitHub Action input (`INPUT_SLACK_WEBHOOK`)
+ * Requires both:
+ * - `SLACK_NOTIFICATIONS_BOT_TOKEN` (preferred) or `SLACK_BOT_TOKEN`
+ * - `CHANNEL_ID` or `SLACK_CHANNEL`
  *
- * If nothing is configured or the HTTP call fails, it logs and returns
- * without failing the action.
+ * If credentials are missing, this is a no-op. If the HTTP call fails,
+ * the error is logged and the action continues (notifications must not
+ * fail the version check).
  */
 async function notifySlack(message: string): Promise<void> {
   const botToken =
-    process.env.SLACK_NOTIFICATIONS_BOT_TOKEN || process.env.SLACK_BOT_TOKEN;
-  const channel = process.env.CHANNEL_ID || process.env.SLACK_CHANNEL;
+    process.env[ENV.SLACK_NOTIFICATIONS_BOT_TOKEN] ||
+    process.env[ENV.SLACK_BOT_TOKEN];
+  const channel = process.env[ENV.CHANNEL_ID] || process.env[ENV.SLACK_CHANNEL];
 
-  // Prefer Web API when token + channel are available
-  if (botToken && channel) {
-    try {
-      const client = new WebClient(botToken);
-      await client.chat.postMessage({
-        channel,
-        text: message,
-      });
-    } catch (err: any) {
-      const status = err?.response?.status;
-      const statusText = err?.response?.statusText;
-      const errorMessage = err?.message || "unknown error";
-      console.log(
-        `Failed to send Slack notification via Web API: ${
-          status ? `${status} ${statusText || ""}`.trim() : errorMessage
-        }`
-      );
-    }
+  if (!botToken || !channel) {
     return;
+  }
+
+  try {
+    const client = new WebClient(botToken);
+    await client.chat.postMessage({
+      channel,
+      text: message,
+    });
+  } catch (err: unknown) {
+    const axiosLike = err as {
+      response?: { status?: number; statusText?: string };
+      message?: string;
+    };
+    const status = axiosLike?.response?.status;
+    const statusText = axiosLike?.response?.statusText;
+    const errorMessage = axiosLike?.message || "unknown error";
+    console.log(
+      `Failed to send Slack notification via Web API: ${
+        status ? `${status} ${statusText || ""}`.trim() : errorMessage
+      }`,
+    );
   }
 }
 
 export default notifySlack;
-
