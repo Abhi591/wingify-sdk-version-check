@@ -141,7 +141,7 @@ A bare `pod 'VWO-FME'` (no version) is resolved from `Podfile.lock` in the same 
 .package(url: "https://github.com/wingify/vwo-fme-ios-sdk", from: "1.66.0")
 ```
 
-Pinned resolution in `Package.resolved` and SPM requirements in `project.pbxproj` (for example `upToNextMajorVersion` with `minimumVersion`) are also detected.
+Pinned resolution in `Package.resolved` and SPM requirements in `project.pbxproj` (for example `upToNextMajorVersion` with `minimumVersion`) are also detected. For Xcode projects, the checker reads `YourApp.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` when present (same layout Xcode creates after **File → Packages → Resolve Package Versions**) and reports the **pinned** version; otherwise it reports the normalized constraint from `project.pbxproj`. The [vwo-fme-examples iOS app](https://github.com/wingify/vwo-fme-examples/tree/master/ios) uses SPM only (no `Podfile`); commit `Package.resolved` or rely on the `minimumVersion` constraint in `project.pbxproj` for CI.
 
 **React Native** (`package.json`):
 
@@ -287,6 +287,9 @@ When an SDK is **outdated**, it prints a Slack-formatted message that includes t
   - Git, file, and `workspace:` specs without a registry version are skipped.
 - **Flutter (`pubspec.yaml`)**:
   - Pub semver ranges (`^`, `>=`, etc.) follow the same rules as npm.
+  - When `pubspec.lock` is present beside the manifest, the **locked** package
+    version is compared to pub.dev (so `^1.6.0` with lock `1.6.0` is flagged
+    when a newer release exists).
   - Path, git, and SDK-only dependencies without a version constraint are skipped.
 
 ### Local development
