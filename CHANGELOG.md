@@ -25,4 +25,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - npm-style ranges (e.g. `^1.4.0`, `~1.4.0`)
     - Ruby `~>` pessimistic constraints (e.g. `~> 1.4`, `~> 1.4.0`)
   - Logs whether each SDK is effectively up to date with the latest release.
-
